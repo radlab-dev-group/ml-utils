@@ -1,5 +1,6 @@
 ## Changelog
 
-| Version | Changelog                                                  |
-|---------|------------------------------------------------------------|
-| 0.0.1   | Initialization, License, setup, Weights and Biases handler |
+| Version | Changelog                                                                                     |
+|---------|-----------------------------------------------------------------------------------------------|
+| 0.0.1   | Initialization, License, setup, Weights and Biases handler                                    |
+| 0.0.2   | Added `utils.*` module, renamed `wandb` to `wandb_handler`, added `handlers.training_handler` | 
