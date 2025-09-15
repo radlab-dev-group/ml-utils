@@ -2,13 +2,15 @@
 
 ## 📖 Overview
 
-`radlab-ml-utils` is a collection of helper utilities and handlers designed to simplify 
+`radlab-ml-utils` is a collection of helper utilities and handlers designed to simplify  
 common machine‑learning workflows. The package includes:
 
 - **OpenAPI handler** – thin client for LLM servers exposing an OpenAPI spec.
 - **Training handler** – utilities for preparing datasets, tokenization and orchestrating training pipelines.
 - **WandB handler** – convenient wrappers around Weights & Biases for experiment tracking, 
   artifact management and rich logging.
+- **Prompt handler** – loads and manages prompt files (`*.prompt`) from a directory tree, 
+  making it easy to reuse and reference prompts programmatically.
 
 The library is built on Python 3.10 and can be installed via `pip install .` after cloning the repository.
 
@@ -17,7 +19,6 @@ The library is built on Python 3.10 and can be installed via `pip install .` aft
 ## 📂 Project Structure
 
 ```
-
 radlab-ml-utils/
 │
 ├─ apps/
@@ -32,7 +33,8 @@ radlab-ml-utils/
 │   │   ├─ __init__.py
 │   │   ├─ openapi_handler.py   # Core OpenAPI client implementation
 │   │   ├─ training_handler.py  # Dataset loading & training helpers
-│   │   └─ wandb_handler.py     # W&B integration utilities
+│   │   ├─ wandb_handler.py     # W&B integration utilities
+│   │   └─ prompt_handler.py    # Prompt loading and lookup utilities
 │   └─ utils/
 │       └─ __init__.py
 │
@@ -116,7 +118,7 @@ The **Training handler** (`TrainingHandler`) streamlines dataset preparation for
 * Loads JSON‑line datasets using the 🤗 Datasets library.
 * Instantiates a tokenizer from a Hugging‑Face model (e.g., `bert-base-uncased`).
 * Stores useful metadata such as the number of unique labels.
-* Exposes ready‑to‑use `train_dataloader` and `eval_dataloader` attributes 
+* Exposes ready‑to‑use `train_dataset` and `eval_dataset` attributes 
   (creation of the actual `DataLoader`s is left to the user, keeping the class framework‑agnostic).
 
 #### Core API
@@ -192,7 +194,7 @@ high‑level API for:
 from rdl_ml_utils.handlers.wandb_handler import WanDBHandler
 
 
-# Assume we have a simple config object (could be a dataclass or Namespace)
+# Simple config object (could be a dataclass or Namespace)
 class WandbConfig:
     PROJECT_NAME = "ml-experiments"
     PROJECT_TAGS = ["nlp", "classification"]
@@ -252,26 +254,74 @@ distinguishable.
 
 ---
 
+### `prompt_handler.py`
+
+The **Prompt handler** (`PromptHandler`) offers a simple way to load, store, and retrieve textual prompts stored as
+`*.prompt` files.  
+Prompts are indexed by a *key* that corresponds to the file’s path **relative to the base directory**, using forward
+slashes and **without the file extension**.
+
+#### Core API
+
+```python
+from rdl_ml_utils.handlers.prompt_handler import PromptHandler
+
+# Initialise the handler pointing at a directory that contains *.prompt files
+prompt_dir = "configs/prompts"  # any directory you like
+ph = PromptHandler(base_dir=prompt_dir)
+
+# List all loaded prompts (key → content)
+all_prompts = ph.list_prompts()
+print("Available prompts:", list(all_prompts.keys()))
+
+# Retrieve a specific prompt
+key = "system/default"  # corresponds to configs/prompts/system/default.prompt
+prompt_text = ph.get_prompt(key)
+print("Prompt content:", prompt_text)
+```
+
+#### How It Works
+
+* **Recursive loading** – The handler walks the `base_dir` recursively (`Path.rglob("*.prompt")`).
+* **Key generation** – For each file, the relative path (POSIX style) is taken, the `.prompt` suffix is stripped, and
+  the result becomes the dictionary key.
+* **In‑memory storage** – Prompt contents are kept in a plain Python `dict[str, str]`, making subsequent look‑ups O(1).
+
+#### Typical Use‑Cases
+
+| Scenario                     | How PromptHandler helps                                                                                                                                  |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Prompt engineering**       | Keep a library of reusable prompts (system, few‑shot examples, task‑specific templates) in a dedicated folder; retrieve them by logical name at runtime. |
+| **Dynamic prompt selection** | Based on experiment configuration, select the appropriate prompt key (`"qa/simple"`, `"summarization/long"` etc.) without hard‑coding file paths.        |
+| **Versioned prompts**        | Store multiple versions (`v1.prompt`, `v2.prompt`) in sub‑folders; the key reflects the version (`"summarization/v1"`).                                  |
+
+#### Error handling
+
+* `KeyError` is raised if a non‑existent key is requested.
+* `RuntimeError` is raised if a prompt file cannot be read (e.g., permission issues).
+
+---
+
 ## 🚀 Getting Started
 
 1. **Clone the repository**
 
-```bash
+```shell script
 git clone https://github.com/radlab-dev-group/radlab-ml-utils.git
-cd radlab-ml-utils
+   cd radlab-ml-utils
 ```
 
 2. **Create a virtual environment and install dependencies**
 
-```bash
+```shell script
 python -m venv .venv
-source .venv/bin/activate   # on Windows: .venv\Scripts\activate
-pip install -e .
+   source .venv/bin/activate   # on Windows: .venv\Scripts\activate
+   pip install -e .
 ```
 
 3. **Run the OpenAPI demo**
 
-```bash
+```shell script
 python apps/openapi_test.py
 ```
 
@@ -279,13 +329,13 @@ python apps/openapi_test.py
 
 ## 📦 Installation
 
-```bash
+```shell script
 pip install git+https://github.com/your-org/radlab-ml-utils.git
 ```
 
 or, after cloning:
 
-```bash
+```shell script
 pip install .
 ```
 
