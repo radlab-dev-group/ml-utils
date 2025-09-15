@@ -1,6 +1,6 @@
 import sys
 
-from rdl_ml_utils.handlers.llm_api import OpenAPIClient
+from rdl_ml_utils.handlers.openapi_handler import OpenAPIClient
 
 
 def main():
