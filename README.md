@@ -80,7 +80,7 @@ with OpenAPIClient(open_api_config="configs/ollama_config.json") as client:
 
     # Simple generation
     answer = client.generate(
-        prompt="Explain logistic regression.",
+        message="Explain logistic regression.",
         system_prompt="You are a statistics expert.",
         max_tokens=512,
     )

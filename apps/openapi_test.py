@@ -14,7 +14,7 @@ def main():
         print("Uruchamianie: client.generate")
         print(
             client.generate(
-                prompt="Wyjaśnij, czym jest regresja logistyczna.",
+                message="Wyjaśnij, czym jest regresja logistyczna.",
                 system_prompt="Jesteś ekspertem w statystyce.",
                 max_tokens=2048,
             )
