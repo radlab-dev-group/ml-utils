@@ -1,116 +1,294 @@
 # radlab-ml-utils
 
-Lightweight utilities to streamline machine learning experiments and training pipelines.
-Focus areas:
-- Weights & Biases (W&B) integration: easy run initialization (tags, merged configs, timestamped names), 
-logging of datasets/models as artifacts, scalar metrics, confusion matrices, and prediction tables.
-- Training and data prep: minimal helpers to ready tokenizer and build train/validation 
-splits from JSON files compatible with Hugging Face Datasets.
-- CLI ergonomics: reusable ArgumentParser field presets for consistent flags, 
-types, and help texts across projects.
+## 📖 Overview
 
-Designed to be plug-and-play, with minimal setup and clear, composable components for everyday ML workflows.
+`radlab-ml-utils` is a collection of helper utilities and handlers designed to simplify 
+common machine‑learning workflows. The package includes:
 
-## Features
-- `wandb_handler` 
-  - Easy W&B run initialization with tags, merged configs, and timestamped names
-  - Log datasets and models as W&B artifacts
-  - Log scalar metrics and confusion matrices
-  - Store prediction results in W&B tables
-- `training_handler` 
-  - Lightweight wrapper to prepare tokenizer and datasets for training/eval
-  - Accepts JSON files using Hugging Face Datasets.
-  - Tracks core paths/configs and prepares in-memory train/validation splits.
-- `argument_parser` 
-  - Build ArgumentParser instances from reusable field presets
-  - Handle required/not-required inputs, output paths, models, and W&B flags.
-  - Consistent short/long options, help texts, and types.
+- **OpenAPI handler** – thin client for LLM servers exposing an OpenAPI spec.
+- **Training handler** – utilities for preparing datasets, tokenization and orchestrating training pipelines.
+- **WandB handler** – convenient wrappers around Weights & Biases for experiment tracking, 
+  artifact management and rich logging.
 
-## Installation
-- Python 3.10+
-- Install in your virtualenv:
-  - Clone the repository
-  - Install the package in editable mode (if applicable): `pip install -e .`
-  - Ensure W&B is installed: `pip install wandb`
+The library is built on Python 3.10 and can be installed via `pip install .` after cloning the repository.
 
-## Requirements
-- wandb
-- transformers
+---
 
-## Quick start
+## 📂 Project Structure
 
-### WB integration -- example
-
-**Example**: tracking a training run with W&B
-
-```python
-from rdl_ml_utils.handlers.wandb_handler import WanDBHandler
-
-# Minimal config objects (adapt as needed)
-class WandbConfig:
-    PROJECT_NAME = "my-project"
-    PROJECT_TAGS = ["experiment", "baseline"]
-    PREFIX_RUN = "run-"
-    BASE_RUN_NAME = "training"
-
-run_config = {"base_model": "distilbert-base-uncased"}
-training_args = type("Args", (), {"epochs": 3, "batch_size": 32})()
-
-# Initialize W&B
-WanDBHandler.init_wandb(
-    wandb_config=WandbConfig,
-    run_config=run_config,
-    training_args=training_args,
-)
-
-# Log metrics
-WanDBHandler.log_metrics({"loss": 0.42, "accuracy": 0.88}, step=1)
-
-# Finish run
-WanDBHandler.finish_wand()
 ```
 
-### Argument parser (argument_parser)
-
-Minimal example:
-
-```python
-from rdl_ml_utils.utils.argument_parser import (
-    prepare_parser_for_fields,
-    INPUT_FILE_REQUIRED,
-    BASE_MODEL_REQUIRED,
-    WANDB_BOOLEAN_FULL,
-)
-
-parser = prepare_parser_for_fields(
-    [INPUT_FILE_REQUIRED, BASE_MODEL_REQUIRED, WANDB_BOOLEAN_FULL],
-    description="My CLI app"
-)
-args = parser.parse_args()
-# args.input_file, args.base_model, args.wandb_full (bool)
+radlab-ml-utils/
+│
+├─ apps/
+│   └─ __init__.py
+│   └─ openapi_test.py          # Example script demonstrating the OpenAPI client
+│
+├─ configs/
+│   └─ ollama_config.json       # Sample OpenAPI configuration file
+│
+├─ rdl_ml_utils/
+│   ├─ handlers/
+│   │   ├─ __init__.py
+│   │   ├─ openapi_handler.py   # Core OpenAPI client implementation
+│   │   ├─ training_handler.py  # Dataset loading & training helpers
+│   │   └─ wandb_handler.py     # W&B integration utilities
+│   └─ utils/
+│       └─ __init__.py
+│
+├─ .gitignore
+├─ CHANGELOG.md
+├─ LICENSE
+├─ README.md                    # *You are reading it right now*
+├─ requirements.txt
+└─ setup.py
 ```
 
-### Training handler (training_handler)
+---
 
-Minimal example:
+## 🛠️ Handlers
+
+### `openapi_handler.py`
+
+The **OpenAPI client** (`OpenAPIClient`) provides a simple, opinionated interface for interacting with LLM servers that
+follow the OpenAI‑compatible API schema.
+
+#### Key Features
+
+| Feature                     | Description                                                                                      |
+|-----------------------------|--------------------------------------------------------------------------------------------------|
+| **Flexible initialization** | Pass `base_url` / `model` directly **or** load them from a JSON config file (`open_api_config`). |
+| **Authentication**          | Optional `api_key` is added as a `Bearer` token header when supplied.                            |
+| **Prompt generation**       | `generate(prompt, …)` returns a plain‑text completion.                                           |
+| **Chat completions**        | `chat(messages, …)` works with the standard `[{role, content}]` message format.                  |
+| **System prompt handling**  | A global `system_prompt` can be set at client creation and overridden per call.                  |
+| **Health check**            | `is_available()` performs a quick GET request to verify server reachability.                     |
+| **Context‑manager**         | Use `with OpenAPIClient(...) as client:` for clean entry/exit semantics.                         |
+
+#### Example Usage
+
+```python
+from rdl_ml_utils.handlers.openapi_handler import OpenAPIClient
+
+# Load configuration from JSON (recommended for reproducibility)
+with OpenAPIClient(open_api_config="configs/ollama_config.json") as client:
+    # Verify the server is up
+    if not client.is_available():
+        raise RuntimeError("OpenAPI server is not reachable.")
+
+    # Simple generation
+    answer = client.generate(
+        prompt="Explain logistic regression.",
+        system_prompt="You are a statistics expert.",
+        max_tokens=512,
+    )
+    print("Generation result:", answer)
+
+    # Chat‑style interaction
+    chat_messages = [
+        {"role": "user", "content": "What are the biggest challenges in ML today?"},
+    ]
+    response = client.chat(
+        messages=chat_messages,
+        system_prompt="Speak like a senior data scientist.",
+        max_tokens=256,
+    )
+    print("Chat response:", response)
+```
+
+#### Configuration File (`configs/ollama_config.json`)
+
+```json
+{
+  "base_url": "http://localhost:11434",
+  "model": "MODEL_NAME",
+  "api_key": "YOUR_API_KEY_IF_NEEDED",
+  "system_prompt": "You are a helpful AI assistant."
+}
+```
+
+---
+
+### `training_handler.py`
+
+The **Training handler** (`TrainingHandler`) streamlines dataset preparation for transformer‑based models. It:
+
+* Loads JSON‑line datasets using the 🤗 Datasets library.
+* Instantiates a tokenizer from a Hugging‑Face model (e.g., `bert-base-uncased`).
+* Stores useful metadata such as the number of unique labels.
+* Exposes ready‑to‑use `train_dataloader` and `eval_dataloader` attributes 
+  (creation of the actual `DataLoader`s is left to the user, keeping the class framework‑agnostic).
+
+#### Core API
 
 ```python
 from rdl_ml_utils.handlers.training_handler import TrainingHandler
 
-th = TrainingHandler(
-    train_dataset_file_path="data/train.json",
-    eval_dataset_file_path="data/valid.json",
-    base_model="model/path",
-    train_batch_size=32,
-    workdir="./workdir"
+handler = TrainingHandler(
+    train_dataset_file_path="data/train.jsonl",
+    eval_dataset_file_path="data/valid.jsonl",
+    base_model="distilbert-base-uncased",
+    train_batch_size=16,
+    workdir="./workdir",
 )
 
-# Access prepared objects:
-#   th.tokenizer, 
-#   th.train_dataset, 
-#   th.eval_dataset, 
-#   th.train_batch_size
+# After initialization:
+#   handler.tokenizer          -> AutoTokenizer instance
+#   handler.train_dataset      -> 🤗 Dataset with training examples
+#   handler.eval_dataset       -> 🤗 Dataset with validation examples
+#   handler.uniq_labels        -> Set of label strings
 ```
 
-## License
-Read [LICENSE](LICENSE)
+#### What the class does internally
+
+```python
+# ... existing code ...
+
+self.tokenizer = AutoTokenizer.from_pretrained(
+    self.base_model, use_fast=True
+)
+
+data = load_dataset(
+    "json",
+    cache_dir="./cache",
+    data_files={
+        "train": self.train_dataset_file_path,
+        "validation": self.eval_dataset_file_path,
+    },
+)
+
+self.train_dataset = data["train"]
+self.eval_dataset = data["validation"]
+```
+
+The handler is deliberately lightweight: it only prepares raw datasets and tokenizers, leaving model definition,
+optimizer setup and training loops to the user’s own script or training framework (PyTorch, TensorFlow, 🤗 Trainer,
+etc.). This makes it easy to plug into existing pipelines while keeping reproducibility (datasets are cached under
+`./cache`).
+
+---
+
+### `wandb_handler.py`
+
+The **WandB handler** (`WanDBHandler`) centralises all interactions with the Weights & Biases service, providing a
+high‑level API for:
+
+| Action                       | Method                                                                                | Description                                                                                                     |
+|------------------------------|---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| **Initialize a run**         | `init_wandb`                                                                          | Sets up a W&B run with project name, tags, and a merged configuration dict (run‑specific + training arguments). |
+| **Log scalar metrics**       | `log_metrics`                                                                         | Sends a dictionary of metric name → value pairs, optionally with a step number.                                 |
+| **Store datasets / models**  | `add_dataset`, `add_model`                                                            | Creates a `wandb.Artifact` of type *dataset* or *model* and uploads the supplied directory.                     |
+| **Finish a run**             | `finish_wandb`                                                                        | Calls `wandb.run.finish()` to close the run cleanly.                                                            |
+| **Prepare run metadata**     | `prepare_run_tags`, `prepare_run_name_with_date`, `prepare_simple_run_name_with_date` | Helper functions that add host information, timestamps and model identifiers to run names/tags.                 |
+| **Merge configs**            | `prepare_run_config`                                                                  | Combines a user‑provided dict with attributes of a `training_args` object (e.g., from 🤗 Trainer).              |
+| **Plot confusion matrix**    | `plot_confusion_matrix`                                                               | Uses `wandb.plot.confusion_matrix` to visualise classification performance.                                     |
+| **Log detailed predictions** | `store_prediction_results`                                                            | Creates a `wandb.Table` with raw text, true label, predicted label and optional per‑class probabilities.        |
+
+#### Example Usage
+
+```python
+from rdl_ml_utils.handlers.wandb_handler import WanDBHandler
+
+
+# Assume we have a simple config object (could be a dataclass or Namespace)
+class WandbConfig:
+    PROJECT_NAME = "ml-experiments"
+    PROJECT_TAGS = ["nlp", "classification"]
+    PREFIX_RUN = "run_"
+    BASE_RUN_NAME = "experiment"
+
+
+wandb_cfg = WandbConfig()
+run_cfg = {"base_model": "distilbert-base-uncased", "learning_rate": 3e-5}
+training_args = None  # could be an argparse.Namespace with many fields
+
+# Initialise run (name will include timestamp and model name)
+WanDBHandler.init_wandb(
+    wandb_config=wandb_cfg,
+    run_config=run_cfg,
+    training_args=training_args,
+    run_name=None,  # auto‑generated
+)
+
+# Log some metrics during training
+for epoch in range(3):
+    # ... training logic ...
+    WanDBHandler.log_metrics({"epoch": epoch, "accuracy": 0.87 + epoch * 0.01})
+
+# After training, store the model artifact
+WanDBHandler.add_model(name="distilbert-finetuned", local_path="./workdir/model")
+
+# Finish the run
+WanDBHandler.finish_wandb()
+```
+
+#### Plotting a Confusion Matrix
+
+```python
+# ground_truth and predictions are list‑like, class_names is a list of label strings
+WanDBHandler.plot_confusion_matrix(
+    ground_truth=y_true,
+    predictions=y_pred,
+    class_names=["neg", "pos"],
+    probs=prediction_probs,  # optional probability matrix
+)
+```
+
+#### Storing Detailed Prediction Results
+
+```python
+WanDBHandler.store_prediction_results(
+    texts_str=test_texts,
+    ground_truth=y_true,
+    pred_labels=y_pred,
+    probs=prediction_probs,
+)
+```
+
+All helper methods automatically add the host name to run tags, ensuring that runs from different machines are easily
+distinguishable.
+
+---
+
+## 🚀 Getting Started
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/radlab-dev-group/radlab-ml-utils.git
+cd radlab-ml-utils
+```
+
+2. **Create a virtual environment and install dependencies**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # on Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+3. **Run the OpenAPI demo**
+
+```bash
+python apps/openapi_test.py
+```
+
+---
+
+## 📦 Installation
+
+```bash
+pip install git+https://github.com/your-org/radlab-ml-utils.git
+```
+
+or, after cloning:
+
+```bash
+pip install .
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
