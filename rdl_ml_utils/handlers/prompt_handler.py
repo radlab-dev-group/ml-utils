@@ -48,3 +48,15 @@ class PromptHandler:
                     self.prompts[rel_path] = f.read()
             except OSError as e:
                 raise RuntimeError(f"Failed to read prompt file {file_path}: {e}")
+
+    def __enter__(self):
+        """
+        Enable usage as a context manager.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Placeholder for cleanup; nothing special needed currently.
+        """
+        return False
