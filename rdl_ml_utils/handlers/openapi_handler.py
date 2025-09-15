@@ -104,7 +104,7 @@ class OpenAPIClient:
 
     def generate(
         self,
-        prompt: str,
+        message: str,
         max_tokens: int = 256,
         temperature: float = 0.7,
         system_prompt: Optional[str] = None,
@@ -118,7 +118,7 @@ class OpenAPIClient:
         effective_system = (
             system_prompt if system_prompt is not None else self.system_prompt
         )
-        full_prompt = f"{effective_system}\n{prompt}" if effective_system else prompt
+        full_prompt = f"{effective_system}\n{message}" if effective_system else message
 
         payload = {
             "model": self.model,
