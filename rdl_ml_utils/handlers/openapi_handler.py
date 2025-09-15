@@ -94,7 +94,8 @@ class OpenAPIClient:
 
         if not self.base_url or not self.model:
             raise ValueError(
-                "When 'open_api_config' is not given, both 'base_url' and 'model' must be provided."
+                "When 'open_api_config' is not given, "
+                "both 'base_url' and 'model' must be provided."
             )
 
         # Header preparation (common for both paths)
@@ -118,7 +119,9 @@ class OpenAPIClient:
         effective_system = (
             system_prompt if system_prompt is not None else self.system_prompt
         )
-        full_prompt = f"{effective_system}\n{message}" if effective_system else message
+        full_prompt = (
+            f"{effective_system}\n{message}" if effective_system else message
+        )
 
         payload = {
             "model": self.model,
