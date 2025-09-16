@@ -7,9 +7,9 @@ common machine‑learning workflows. The package includes:
 
 - **OpenAPI handler** – thin client for LLM servers exposing an OpenAPI spec.
 - **Training handler** – utilities for preparing datasets, tokenization and orchestrating training pipelines.
-- **WandB handler** – convenient wrappers around Weights & Biases for experiment tracking, 
+- **WandB handler** – convenient wrappers around Weights & Biases for experiment tracking,
   artifact management and rich logging.
-- **Prompt handler** – loads and manages prompt files (`*.prompt`) from a directory tree, 
+- **Prompt handler** – loads and manages prompt files (`*.prompt`) from a directory tree,
   making it easy to reuse and reference prompts programmatically.
 
 The library is built on Python 3.10 and can be installed via `pip install .` after cloning the repository.
@@ -111,6 +111,54 @@ with OpenAPIClient(open_api_config="configs/ollama_config.json") as client:
 
 ---
 
+### `openapi_queue_manager.py`
+
+The **OpenAPI queue manager** (`OpenAPIQueue`) provides a thin, thread‑safe wrapper around multiple
+`OpenAPIClient` instances. It loads client configurations from JSON files, creates a pool of worker
+threads, and processes `generate` and `chat` requests in a first‑in‑first‑out (FIFO) order.
+
+#### Why use it?
+
+| Benefit                          | Explanation                                                                                                                                  |
+|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| **Parallel client usage**        | Multiple LLM endpoints can be configured and used simultaneously, improving throughput.                                                      |
+| **Automatic request scheduling** | Calls are enqueued and dispatched to the first free client, so you never have to manage locks yourself.                                      |
+| **Simple synchronous API**       | Despite the internal concurrency, the public methods (`generate`, `chat`) block until a result is ready, making integration straightforward. |
+| **Graceful shutdown**            | `close()` cleanly stops all background workers.                                                                                              |
+
+#### Core API
+
+```python
+from pathlib import Path
+from rdl_ml_utils.utils.openapi_queue_manager import OpenAPIQueue
+
+# Initialise the queue with one or more client config files
+queue = OpenAPIQueue([
+    Path("configs/ollama-config.json"),
+    Path("configs/ollama-config_lab4_1.json"),
+])
+
+# Generate a completion (handled by the first available client)
+answer = queue.generate(
+    "Explain quantum entanglement.",
+    max_tokens=128,
+)
+
+# Chat‑style interaction
+reply = queue.chat(
+    "What is the capital of France?",
+    max_tokens=64,
+)
+
+# When finished, shut down the workers
+queue.close()
+```
+
+The class handles all low‑level details (client selection, locking, task queuing)
+so you can focus on the prompts and model logic.
+
+---
+
 ### `training_handler.py`
 
 The **Training handler** (`TrainingHandler`) streamlines dataset preparation for transformer‑based models. It:
@@ -118,7 +166,7 @@ The **Training handler** (`TrainingHandler`) streamlines dataset preparation for
 * Loads JSON‑line datasets using the 🤗 Datasets library.
 * Instantiates a tokenizer from a Hugging‑Face model (e.g., `bert-base-uncased`).
 * Stores useful metadata such as the number of unique labels.
-* Exposes ready‑to‑use `train_dataset` and `eval_dataset` attributes 
+* Exposes ready‑to‑use `train_dataset` and `eval_dataset` attributes
   (creation of the actual `DataLoader`s is left to the user, keeping the class framework‑agnostic).
 
 #### Core API
