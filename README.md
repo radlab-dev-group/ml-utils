@@ -356,15 +356,15 @@ print("Prompt content:", prompt_text)
 
 ```shell script
 git clone https://github.com/radlab-dev-group/ml-utils.git
-   cd ml-utils
+cd ml-utils
 ```
 
 2. **Create a virtual environment and install dependencies**
 
 ```shell script
 python -m venv .venv
-   source .venv/bin/activate   # on Windows: .venv\Scripts\activate
-   pip install -e .
+source .venv/bin/activate
+pip install -e .
 ```
 
 3. **Run the OpenAPI demo**
@@ -391,4 +391,4 @@ pip install .
 
 ## 📜 License
 
-This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License – see the [LICENSE](LICENSE) file for details.
