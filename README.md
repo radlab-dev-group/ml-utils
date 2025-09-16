@@ -355,8 +355,8 @@ print("Prompt content:", prompt_text)
 1. **Clone the repository**
 
 ```shell script
-git clone https://github.com/radlab-dev-group/radlab-ml-utils.git
-   cd radlab-ml-utils
+git clone https://github.com/radlab-dev-group/ml-utils.git
+   cd ml-utils
 ```
 
 2. **Create a virtual environment and install dependencies**
@@ -378,7 +378,7 @@ python apps/openapi_test.py
 ## 📦 Installation
 
 ```shell script
-pip install git+https://github.com/your-org/radlab-ml-utils.git
+pip install git+https://github.com/radlab-dev-group/ml-utils.git
 ```
 
 or, after cloning:
