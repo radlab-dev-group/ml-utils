@@ -5,8 +5,8 @@ import threading
 from typing import Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor
 
+from rdl_ml_utils.open_api.queue_manager import OpenAPIQueue
 from rdl_ml_utils.handlers.prompt_handler import PromptHandler
-from rdl_ml_utils.utils.openapi_queue_manager import OpenAPIQueue
 
 
 class OpenApiHandlerWithCache:

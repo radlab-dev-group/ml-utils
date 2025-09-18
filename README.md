@@ -130,7 +130,7 @@ threads, and processes `generate` and `chat` requests in a first‑in‑first‑
 
 ```python
 from pathlib import Path
-from rdl_ml_utils.utils.openapi_queue_manager import OpenAPIQueue
+from rdl_ml_utils.open_api.openapi_queue_manager import OpenAPIQueue
 
 # Initialise the queue with one or more client config files
 queue = OpenAPIQueue([
