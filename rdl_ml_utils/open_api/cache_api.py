@@ -10,7 +10,7 @@ from rdl_ml_utils.handlers.prompt_handler import PromptHandler
 
 
 class OpenApiHandlerWithCache:
-    CACHE_RESULTS = 1000
+    CACHE_RESULTS = 500
 
     def __init__(
         self,
