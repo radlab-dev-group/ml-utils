@@ -98,6 +98,7 @@ class OpenApiHandlerWithCache:
                 self.batch[text_str] = _m_res
                 if len(self.batch) >= self.cache_results_size:
                     self._store_cache_batch(batch=self.batch)
+                    self.batch.clear()
 
         _res = []
         res = self.pool.map(_work, [text_str])
