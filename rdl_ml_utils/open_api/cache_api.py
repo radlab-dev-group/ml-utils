@@ -109,6 +109,33 @@ class OpenApiHandlerWithCache:
         return _res
 
     def _store_cache_batch(self, batch):
+        """
+        Persist the current in-memory batch to a timestamped JSON file.
+
+        This method serializes the provided key-value pairs (input text -> corrected
+        text) to a file located in the configured working directory. The output
+        filename encodes a high-resolution timestamp and the sequential batch number
+        to avoid collisions and preserve ordering:
+          {YYYYMMDD_HHMMSS}.{microseconds}__{batch_number:05}.json
+
+        Notes
+        -----
+        - The working directory is expected to exist (created during initialization).
+        - The method increments the internal batch counter after a successful writing.
+        - JSON is written with indentation (2 spaces) and ensure_ascii=False to
+          preserve non-ASCII characters.
+        - Thread-safety: callers should guard concurrent invocations (e.g., via
+          `self.lock_map`) to avoid interleaved writes.
+
+        Parameters
+        ----------
+        batch : dict
+            Mapping of source strings to their corrected results to be persisted.
+
+        Returns
+        -------
+        None
+        """
         date_now = datetime.datetime.now()
         data_as_str = date_now.strftime("%Y%m%d_%H%M%S")
         data_as_str += f".{date_now.microsecond:06d}"
