@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 import threading
 
 from typing import Optional, Dict, List
@@ -19,6 +20,7 @@ class OpenApiHandlerWithCache:
         workdir: str,
         openapi_configs_dir: str,
         max_workers: int | None = None,
+        cache_results_size: Optional[int] = None,
     ):
         """
         Parameters
@@ -44,8 +46,11 @@ class OpenApiHandlerWithCache:
             If the specified `prompt_name` cannot be found by the PromptHandler.
         """
         self.workdir = workdir
+        os.makedirs(self.workdir, exist_ok=True)
+
         self.prompts_dir = prompts_dir
         self.prompt_name = prompt_name
+        self.cache_results_size = cache_results_size or self.CACHE_RESULTS
 
         config_paths = self._list_json_openapi_configs(openapi_configs_dir)
         self.open_api = OpenAPIQueue(config_paths=config_paths)
@@ -58,15 +63,17 @@ class OpenApiHandlerWithCache:
         with PromptHandler(base_dir=prompts_dir) as prompt_handler:
             self.prompt_str = prompt_handler.get_prompt(key=prompt_name)
 
-        self._correct_texts: Dict[str, str] = {}
-        os.makedirs(self.workdir, exist_ok=True)
-
-        # Try to load _correct_texts from `workdir`
-        # TODO...
-        self.batch_number = 0
         self.batch = {}
+        self.batch_number = 0
+        self._correct_texts: Dict[str, str] = {}
         self.pool = ThreadPoolExecutor(max_workers=max_workers)
         self.lock_map = threading.Lock()
+
+        # Try to load _correct_texts from `workdir`
+        loaded_cnt = self._load_cache_from_workdir()
+        if loaded_cnt:
+            print(f" ~> loaded {loaded_cnt} cached items from {self.workdir}")
+            print(f" ~> current batch is set to number {self.batch_number}")
 
     def generate(self, text_str: str | List[str]) -> Optional[str | List[str]]:
         # with self.lock_map:
@@ -81,7 +88,7 @@ class OpenApiHandlerWithCache:
             _m_res = self._generate_with_retries(
                 message=txt,
                 system_prompt=self.prompt_str,
-                max_tokens=max(len(txt) * 2, 128),
+                max_tokens=9192,
             )
             if _m_res is None or not str(_m_res).strip():
                 _m_res = txt
@@ -89,12 +96,11 @@ class OpenApiHandlerWithCache:
             with self.lock_map:
                 self._correct_texts[text_str] = _m_res
                 self.batch[text_str] = _m_res
-                if len(self.batch) >= self.CACHE_RESULTS:
+                if len(self.batch) >= self.cache_results_size:
                     self._store_cache_batch(batch=self.batch)
 
-        res = self.pool.map(_work, text_str)
-
         _res = []
+        res = self.pool.map(_work, [text_str])
         for s in res:
             _res.append(s)
         if len(_res) == 1:
@@ -102,12 +108,55 @@ class OpenApiHandlerWithCache:
         return _res
 
     def _store_cache_batch(self, batch):
-        out_f_path = os.path.join(self.workdir, f"{self.batch_number:05}.json")
+        date_now = datetime.datetime.now()
+        data_as_str = date_now.strftime("%Y%m%d_%H%M%S")
+        data_as_str += f".{date_now.microsecond:06d}"
+
+        out_f_path = os.path.join(
+            self.workdir, f"{data_as_str}__{self.batch_number:05}.json"
+        )
         print(f" ~> storing correct text to cache file: {out_f_path}")
 
         with open(out_f_path, "w") as f:
             json.dump(batch, f, indent=2, ensure_ascii=False)
             self.batch_number += 1
+
+    def _load_cache_from_workdir(self) -> int:
+        """
+        Scan workdir for .json cache files and load their contents
+        into self._correct_texts.
+
+        Returns
+        -------
+        int
+            Number of unique items loaded into the in-memory cache.
+        """
+        loaded = 0
+        max_batch_seen = -1
+        workdir_content = sorted(os.listdir(self.workdir))
+        for f_name in workdir_content:
+            if not f_name.lower().endswith(".json"):
+                continue
+
+            fpath = os.path.join(self.workdir, f_name)
+            if not os.path.isfile(fpath):
+                continue
+
+            with open(fpath, "r") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    self._correct_texts[k] = v
+                    loaded += 1
+
+            base = os.path.basename(f_name).rstrip(".json")
+            if "__" in base:
+                batch_str = base.split("__")[-1]
+                max_batch_seen = max(max_batch_seen, int(batch_str))
+
+        if max_batch_seen >= 0:
+            self.batch_number = max(self.batch_number, max_batch_seen + 1)
+        return loaded
 
     def _generate_with_retries(
         self, message: str, system_prompt: str, max_tokens: int, retries: int = 3
@@ -152,6 +201,26 @@ class OpenApiHandlerWithCache:
             except Exception as e:
                 pass
         return None
+
+    def __del__(self):
+        """
+        Ensure any remaining cached batch is persisted when the handler
+        is destroyed. Also attempts to shut down the thread pool gracefully.
+        """
+        try:
+            if self.pool is not None:
+                self.pool.shutdown(wait=True)
+        except Exception:
+            pass
+
+        try:
+            if self.batch is not None and len(self.batch):
+                with self.lock_map:
+                    if self.batch:
+                        self._store_cache_batch(batch=self.batch)
+                        self.batch.clear()
+        except Exception:
+            pass
 
     @staticmethod
     def _list_json_openapi_configs(look_dir: str) -> List[str]:
