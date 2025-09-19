@@ -19,6 +19,7 @@ The library is built on Python 3.10 and can be installed via `pip install .` aft
 ## 📂 Project Structure
 
 ```
+
 radlab-ml-utils/
 │
 ├─ apps/
@@ -35,6 +36,10 @@ radlab-ml-utils/
 │   │   ├─ training_handler.py  # Dataset loading & training helpers
 │   │   ├─ wandb_handler.py     # W&B integration utilities
 │   │   └─ prompt_handler.py    # Prompt loading and lookup utilities
+│   ├─ open_api/
+│   │   ├─ __init__.py
+│   │   ├─ cache_api.py         # Request-response caching utilities for OpenAPI calls
+│   │   └─ queue_manager.py     # Threaded queue/pool for multiple OpenAPI clients
 │   └─ utils/
 │       └─ __init__.py
 │
@@ -66,6 +71,17 @@ follow the OpenAI‑compatible API schema.
 | **System prompt handling**  | A global `system_prompt` can be set at client creation and overridden per call.                  |
 | **Health check**            | `is_available()` performs a quick GET request to verify server reachability.                     |
 | **Context‑manager**         | Use `with OpenAPIClient(...) as client:` for clean entry/exit semantics.                         |
+
+#### Configuration File (`configs/ollama_config.json`)
+
+```json
+{
+  "base_url": "http://localhost:11434",
+  "model": "MODEL_NAME",
+  "api_key": "YOUR_API_KEY_IF_NEEDED",
+  "system_prompt": "You are a helpful AI assistant."
+}
+```
 
 #### Example Usage
 
@@ -130,7 +146,7 @@ threads, and processes `generate` and `chat` requests in a first‑in‑first‑
 
 ```python
 from pathlib import Path
-from rdl_ml_utils.utils.openapi_queue_manager import OpenAPIQueue
+from rdl_ml_utils.open_api.openapi_queue_manager import OpenAPIQueue
 
 # Initialise the queue with one or more client config files
 queue = OpenAPIQueue([
@@ -156,6 +172,36 @@ queue.close()
 
 The class handles all low‑level details (client selection, locking, task queuing)
 so you can focus on the prompts and model logic.
+
+---
+
+### `open_api/cache_api.py`
+
+The **OpenAPI cache utilities** provide a lightweight caching layer for request/response pairs
+made via the OpenAPI client stack. This is useful when you want to avoid repeated calls
+for identical inputs (e.g., during prompt iteration, evaluation, or notebook exploration).
+
+#### Key capabilities
+
+- Request signature hashing based on input content and selected generation parameters.
+- In‑memory cache for fast repeat access and optional persistence to disk to survive process restarts.
+- Transparent use with generation or chat‑style calls to reduce latency and cost.
+- Simple controls to bypass cache for a specific call or to invalidate entries programmatically.
+
+#### Typical usage patterns
+
+- Wrap your OpenAPI calls with a cache lookup, and only call the backend if there is a cache miss.
+- Scope caches by project/run folder so that experiments do not interfere with each other.
+- Periodically clear or prune the cache (e.g., by a max size or time‑to‑live policy) according to your workflow.
+
+Example flow (conceptual):
+
+1) Build a request key from the prompt/messages and key parameters (e.g., model, temperature, max_tokens).
+2) If the key is present, return the stored response.
+3) Otherwise, call the OpenAPI client, store the response under that key, and return it.
+
+This module is designed to be orthogonal to the queue manager: you can use caching with or without the queue,
+and you can place caching either outside (per request) or inside (per worker) depending on your needs.
 
 ---
 
@@ -372,6 +418,10 @@ pip install -e .
 ```shell script
 python apps/openapi_test.py
 ```
+
+Tip: For higher throughput or multi-endpoint setups, consider using the queue manager described
+in open_api/queue_manager.py. You can also add a local cache layer (see open_api/cache_api.py)
+to avoid recomputing identical requests during experiments.
 
 ---
 
