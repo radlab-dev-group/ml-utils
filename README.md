@@ -86,7 +86,7 @@ follow the OpenAI‑compatible API schema.
 #### Example Usage
 
 ```python
-from rdl_ml_utils.handlers.openapi_handler import OpenAPIClient
+from rdl_ml_utils.open_api.client import OpenAPIClient
 
 # Load configuration from JSON (recommended for reproducibility)
 with OpenAPIClient(open_api_config="configs/ollama_config.json") as client:
@@ -146,7 +146,7 @@ threads, and processes `generate` and `chat` requests in a first‑in‑first‑
 
 ```python
 from pathlib import Path
-from rdl_ml_utils.open_api.openapi_queue_manager import OpenAPIQueue
+from rdl_ml_utils.open_api.queue_manager import OpenAPIQueue
 
 # Initialise the queue with one or more client config files
 queue = OpenAPIQueue([

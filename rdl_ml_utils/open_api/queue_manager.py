@@ -34,7 +34,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 
-from rdl_ml_utils.handlers.openapi_handler import OpenAPIClient
+from rdl_ml_utils.open_api.client import OpenAPIClient
 
 
 @dataclass
