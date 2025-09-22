@@ -11,7 +11,7 @@ class PromptHandler:
     """
 
     def __init__(self, base_dir: str):
-        self.base_dir = Path(base_dir).resolve()
+        self.base_dir = Path(base_dir)
         self.prompts: Dict[str, str] = {}
         self._load_prompts()
 
