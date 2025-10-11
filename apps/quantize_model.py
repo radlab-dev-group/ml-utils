@@ -42,7 +42,8 @@ def _existing_dir(path: str) -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Quantise a Hugging‑Face checkpoint with bits‑and‑bytes, GPTQ or AWQ.",
+        description="Quantise a Hugging‑Face "
+        "checkpoint with bits‑and‑bytes, GPTQ or AWQ.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -51,7 +52,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--model",
         required=True,
         type=_existing_dir,
-        help="Path to the model checkpoint (directory that contains config.json, pytorch_model.bin, …).",
+        help="Path to the model checkpoint "
+        "(directory that contains config.json, pytorch_model.bin, ...).",
     )
 
     parser.add_argument(
@@ -73,7 +75,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Path to a calibration dataset (any format accepted by the 🤗 "
-            "`datasets` library). Required for GPTQ and AWQ; ignored for bits‑and‑bytes."
+            "`datasets` library). Required for GPTQ and AWQ; "
+            "ignored for bits‑and‑bytes."
         ),
     )
 
@@ -101,14 +104,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # --------------------------------------------------------------------- #
-    #  Validate user‑provided values
-    # --------------------------------------------------------------------- #
     model_path: Path = args.model
     methods: List[str] = args.method
 
-    # The ModelQuantizer itself will raise a clear error if an unknown method
-    # is requested, but we can give a nicer early‑exit message.
     known_methods = {"bitsandbytes", "gptq", "awq"}
     unknown = [m for m in methods if m not in known_methods]
     if unknown:
@@ -118,21 +116,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         return 1
 
-    # --------------------------------------------------------------------- #
-    #  Build the quantiser
-    # --------------------------------------------------------------------- #
     quantizer = ModelQuantizer(
         model_path=str(model_path),
         quant_methods=methods,
         calibration_path=args.calibration,
     )
 
-    # --------------------------------------------------------------------- #
-    #  Run the job
-    # --------------------------------------------------------------------- #
-    # If the user asked for a single method we call ``quantize_one`` so the
-    # ``--force`` flag has an effect.  For more than one method we delegate to
-    # ``quantize_all`` (which internally loops over the list).
     if len(methods) == 1:
         quantizer.quantize_one(methods[0], force=args.force)
     else:
