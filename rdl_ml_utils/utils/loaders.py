@@ -73,11 +73,17 @@ class JSONLLoader(LoadInterface):
                     continue  # skip blank lines
                 try:
                     data = json.loads(line)
-                    if self.accept_fields is not None:
-                        data = {
-                            k: v for k, v in data.items() if k in self.accept_fields
-                        }
-                    yield data
+                    if type(data) not in [list]:
+                        data = [data]
+
+                    for _data in data:
+                        if self.accept_fields is not None:
+                            _data = {
+                                k: v
+                                for k, v in _data.items()
+                                if k in self.accept_fields
+                            }
+                        yield _data
                 except json.JSONDecodeError as exc:
                     raise ValueError(
                         f"Invalid JSON on line {line_number} of {self.path}: {exc}"
