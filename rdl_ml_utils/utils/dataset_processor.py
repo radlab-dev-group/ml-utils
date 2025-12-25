@@ -18,7 +18,7 @@ Typical usage::
 from pathlib import Path
 from typing import List, Dict, Any
 
-from rdl_ml_utils.utils.loaders import JSONLLoader, JSONLoader
+from rdl_ml_utils.utils.loaders import JSONLLoader, JSONLoader, RawTextLoader
 
 # ----------------------------------------------------------------------
 # Registry that maps a dataset type string to the appropriate loader class.
@@ -27,6 +27,7 @@ from rdl_ml_utils.utils.loaders import JSONLLoader, JSONLoader
 _DATASET_LOADER_REGISTRY = {
     "json": JSONLoader,
     "jsonl": JSONLLoader,
+    "txt": RawTextLoader,
 }
 
 

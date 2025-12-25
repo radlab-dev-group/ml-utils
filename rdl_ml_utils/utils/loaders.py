@@ -29,6 +29,80 @@ class LoadInterface(ABC):
         ...
 
 
+class RawTextLoader(LoadInterface):
+    """
+    Loader for raw text files.
+
+    Each line of the file is yielded as a dictionary. By default the
+    line content is stored under the key ``"text"``, but you can customize
+    the field name with ``text_field``. If ``include_line_number`` is
+    ``True``, the line number (starting at 1) is added under the key
+    ``line_number`` (or a custom ``line_number_field``).
+
+    The loader streams the file, so memory usage stays low even for
+    very large text sources.
+    """
+
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        encoding: str = "utf-8",
+        strip: bool = True,
+        include_line_number: bool = False,
+        text_field: str = "text",
+        line_number_field: str = "line_number",
+    ):
+        """
+        Parameters
+        ----------
+        path : str | Path
+            Path to the text file.
+        encoding : str, optional
+            File encoding (default ``'utf-8'``).
+        strip : bool, optional
+            Remove trailing newline characters from each line
+            (default ``True``). Set to ``False`` to keep the exact
+            line content.
+        include_line_number : bool, optional
+            Weather to add the line number to each yielded record
+            (default ``False``).
+        text_field : str, optional
+            Dictionary key under which the line text is stored
+            (default ``'text'``).
+        line_number_field : str, optional
+            Dictionary key for the line number when
+            ``include_line_number`` is ``True``
+            (default ``'line_number'``).
+        """
+        self.path = Path(path)
+        self.encoding = encoding
+        self.strip = strip
+        self.include_line_number = include_line_number
+        self.text_field = text_field
+        self.line_number_field = line_number_field
+
+    def load(self) -> Generator[Dict[str, Any], None, None]:
+        """
+        Yield one record per line of the file.
+
+        Returns
+        -------
+        Generator[Dict[str, Any], None, None]
+            Each dict contains at least the ``text_field`` entry. If
+            ``include_line_number`` is ``True``, a ``line_number_field``
+            entry is also present.
+        """
+        with self.path.open("r", encoding=self.encoding) as f:
+            for line_number, line in enumerate(f, start=1):
+                if self.strip:
+                    line = line.rstrip("\n\r")
+                record: Dict[str, Any] = {self.text_field: line}
+                if self.include_line_number:
+                    record[self.line_number_field] = line_number
+                yield record
+
+
 class JSONLLoader(LoadInterface):
     """
     Loader for JSON Lines (JSONL) files.
