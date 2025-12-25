@@ -46,6 +46,7 @@ class RawTextLoader(LoadInterface):
     def __init__(
         self,
         path: str | Path,
+        accept_fields: Optional[List[str]] = None,
         *,
         encoding: str = "utf-8",
         strip: bool = True,
@@ -75,6 +76,8 @@ class RawTextLoader(LoadInterface):
             ``include_line_number`` is ``True``
             (default ``'line_number'``).
         """
+        self.accept_fields = accept_fields
+
         self.path = Path(path)
         self.encoding = encoding
         self.strip = strip
