@@ -128,8 +128,10 @@ class DatasetProcessor:
         ext = path.suffix.lower()
         if ext == ".json":
             return "json"
-        if ext == ".jsonl":
+        elif ext == ".jsonl":
             return "jsonl"
+        elif ext == ".txt":
+            return "txt"
 
         available_types = ", ".join(list(_DATASET_LOADER_REGISTRY.keys()))
         raise ValueError(
