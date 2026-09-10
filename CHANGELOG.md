@@ -8,3 +8,4 @@
 | 0.0.4   | Refactored code to `open_api` separated module. Add module `OpenApiHandlerWithCache` as simple manager to connect PromptHandler and OpenAPIQueue to multithread executions (with cached user query-response pairs). |
 | 0.0.5   | Added module to prepare model (many architectures) quantization.                                                                                                                                                    |
 | 1.0.0   | `setup.py` preapred for PyPi publication                                                                                                                                                                            |
+| 1.0.1   | `wandb` and `transformers` moved to optional dependencies -- not installed by default. Install them with `pip install .[deps]` (requirements.txt).                                                                  |
