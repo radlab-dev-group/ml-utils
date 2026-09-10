@@ -5,7 +5,7 @@ README = (Path(__file__).parent / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="radlab-ml-utils",
-    version="1.0.0",
+    version="1.0.1",
     description="Lightweight utilities to streamline machine learning workflows.",
     long_description=README,
     long_description_content_type="text/markdown",
