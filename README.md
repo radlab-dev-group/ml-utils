@@ -437,6 +437,13 @@ or, after cloning:
 pip install .
 ```
 
+> The base install has **no heavy dependencies** (e.g. `wandb`, `transformers` are not
+> pulled in). Install the optional dependencies (from `requirements.txt`) with:
+>
+> ```shell script
+> pip install .[deps]
+> ```
+
 ---
 
 ## 📜 License
